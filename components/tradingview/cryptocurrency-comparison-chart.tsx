@@ -30,6 +30,7 @@ export function CryptocurrencyComparisonChart({ symbol }: { symbol: string }) {
           ref={container}
           style={{height: '100%', width: '100%'}}
       >
+        {/* @ts-ignore */}
         <gecko-coin-compare-chart-widget locale="en" outlined="true" coin-ids={symbol} initial-currency="usd"></gecko-coin-compare-chart-widget>
         <div className="tradingview-widget-copyright">
           <a

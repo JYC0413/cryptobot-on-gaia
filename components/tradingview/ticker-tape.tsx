@@ -32,8 +32,8 @@ export function TickerTape() {
           className="tradingview-widget-container mb-2 md:min-h-20 min-h-28"
           ref={container}
       >
-        <gecko-coin-price-marquee-widget locale="en" outlined="true" coin-ids=""
-                                         initial-currency="usd"></gecko-coin-price-marquee-widget>
+        {/* @ts-ignore */}
+        <gecko-coin-price-marquee-widget locale="en" outlined="true" coin-ids="" initial-currency="usd"></gecko-coin-price-marquee-widget>
         <div className="tradingview-widget-copyright flex justify-end mr-2">
           <a
               href="https://www.coingecko.com/"

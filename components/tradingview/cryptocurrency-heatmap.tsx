@@ -29,6 +29,7 @@ export function CryptocurrencyHeatmap({ symbol }: { symbol: string }) {
             ref={container}
             style={{height: '100%', width: '100%'}}
         >
+          {/* @ts-ignore */}
           <gecko-coin-heatmap-widget locale="en" outlined="true" top={symbol || "100"}></gecko-coin-heatmap-widget>
           <div className="tradingview-widget-copyright">
             <a

@@ -29,6 +29,7 @@ export function CryptocurrencyDetailsWithExchanges({ symbol }: { symbol: string 
           ref={container}
           style={{height: '100%', width: '100%'}}
       >
+        {/* @ts-ignore */}
         <gecko-coin-market-ticker-list-widget locale="en" outlined="true" coin-id={symbol} initial-currency="usd"></gecko-coin-market-ticker-list-widget>
         <div className="tradingview-widget-copyright">
           <a

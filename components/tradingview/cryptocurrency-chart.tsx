@@ -29,6 +29,7 @@ export function CryptocurrencyChart({ symbol }: { symbol: string }) {
         ref={container}
         style={{ height: '100%', width: '100%' }}
       >
+        {/* @ts-ignore */}
         <gecko-coin-price-chart-widget locale="en" outlined="true" coin-id={symbol} initial-currency="usd"></gecko-coin-price-chart-widget>
         <div className="tradingview-widget-copyright">
           <a
