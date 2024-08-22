@@ -1,114 +1,112 @@
 import 'server-only'
 
-import { generateText } from 'ai'
-import {
-  createAI,
-  getMutableAIState,
-  streamUI,
-  createStreamableValue
-} from 'ai/rsc'
-import { createOpenAI } from '@ai-sdk/openai'
+import {generateText} from 'ai'
+import {createAI, createStreamableValue, getMutableAIState, streamUI} from 'ai/rsc'
+import {createOpenAI} from '@ai-sdk/openai'
 
-import { BotCard, BotMessage } from '@/components/stocks/message'
+import {BotCard, BotMessage, SpinnerMessage} from '@/components/stocks/message'
 
-import { z } from 'zod'
-import { nanoid } from '@/lib/utils'
-import { SpinnerMessage } from '@/components/stocks/message'
-import { Message } from '@/lib/types'
-import { StockChart } from '@/components/tradingview/stock-chart'
-import { StockPrice } from '@/components/tradingview/stock-price'
-import { StockNews } from '@/components/tradingview/stock-news'
-import { StockFinancials } from '@/components/tradingview/stock-financials'
-import { StockScreener } from '@/components/tradingview/stock-screener'
-import { MarketOverview } from '@/components/tradingview/market-overview'
-import { MarketHeatmap } from '@/components/tradingview/market-heatmap'
-import { MarketTrending } from '@/components/tradingview/market-trending'
-import { ETFHeatmap } from '@/components/tradingview/etf-heatmap'
-import { toast } from 'sonner'
+import {z} from 'zod'
+import {nanoid} from '@/lib/utils'
+import {Message} from '@/lib/types'
+import {CryptocurrencyChart} from "@/components/tradingview/cryptocurrency-chart";
+import {CryptocurrencyComparisonChart} from "@/components/tradingview/cryptocurrency-comparison-chart";
+import {CryptocurrencyHeatmap} from "@/components/tradingview/cryptocurrency-heatmap";
+import {CryptocurrencyPriceList} from "@/components/tradingview/cryptocurrency-price-list";
+import {CryptocurrencyValue} from "@/components/tradingview/cryptocurrency-value";
+import {CryptocurrencyDetails} from "@/components/tradingview/cryptocurrency-details";
+import {CryptocurrencyDetailsWithExchanges} from "@/components/tradingview/cryptocurrency-details-with-exchanges";
 
 export type AIState = {
-  chatId: string
-  messages: Message[]
+    chatId: string
+    messages: Message[]
 }
 
 export type UIState = {
-  id: string
-  display: React.ReactNode
+    id: string
+    display: React.ReactNode
 }[]
 
 interface MutableAIState {
-  update: (newState: any) => void
-  done: (newState: any) => void
-  get: () => AIState
+    update: (newState: any) => void
+    done: (newState: any) => void
+    get: () => AIState
 }
 
 const baseUrl = process.env.LLAMAEDGE_BASE_URL || "https://llamatool.us.gaianet.network/v1"
 const apiKey = process.env.LLAMAEDGE_API_KEY || "LLAMAEDGE"
+const GROQ_API_KEY_ENV = process.env.GROQ_API_KEY || "LLAMAEDGE"
+const TOOL_MODEL = 'llama3-70b-8192'
 const modelName = process.env.LLAMAEDGE_MODEL_NAME || "llama"
 
 type ComparisonSymbolObject = {
-  symbol: string;
-  position: "SameScale";
+    symbol: string;
+    position: "SameScale";
 };
 
 async function generateCaption(
-  symbol: string,
-  comparisonSymbols: ComparisonSymbolObject[],
-  toolName: string,
-  aiState: MutableAIState
+    symbol: string,
+    comparisonSymbols: ComparisonSymbolObject[],
+    toolName: string,
+    aiState: MutableAIState
 ): Promise<string> {
-  const LlamaEdge = createOpenAI({
-    baseURL: baseUrl,
-    apiKey: apiKey
-  });
+    // const LlamaEdge = createOpenAI({
+    //   baseURL: 'https://api.groq.com/openai/v1',
+    //   apiKey: GROQ_API_KEY_ENV
+    // });
 
-  const stockString = comparisonSymbols.length === 0
-  ? symbol
-  : [symbol, ...comparisonSymbols.map(obj => obj.symbol)].join(', ');
+    // const LlamaEdge = createOpenAI({
+    //   baseURL: "https://llama.us.gaianet.network/v1",
+    //   apiKey: apiKey
+    // });
 
-  aiState.update({
-    ...aiState.get(),
-    messages: [...aiState.get().messages]
-  })
+    const LlamaEdge = createOpenAI({
+        baseURL: baseUrl,
+        apiKey: apiKey
+    });
 
-  const captionSystemMessage =
-    `\
+    const stockString = comparisonSymbols.length === 0
+        ? symbol
+        : [symbol, ...comparisonSymbols.map(obj => obj.symbol)].join(', ');
+    console.log("messages", [...aiState.get().messages])
+    aiState.update({
+        ...aiState.get(),
+        messages: [...aiState.get().messages]
+    })
+
+    const captionSystemMessage =
+        `\
 You are a stock market conversation bot. You can provide the user information about stocks include prices and charts in the UI. You do not have access to any information and should only provide information by calling functions.
 
 These are the tools you have available:
-1. showStockFinancials
-This tool shows the financials for a given stock.
+1. showCryptocurrencyChart
+This tool shows a cryptocurrency chart for a given coin using its full name.
 
-2. showStockChart
-This tool shows a stock chart for a given stock or currency. Optionally compare 2 or more tickers.
+2. showCryptocurrencyComparisonChart
+This tool shows a comparison chart for 2 or more cryptocurrencies using their full names.
 
-3. showStockPrice
-This tool shows the price of a stock or currency.
+3. showCryptocurrencyHeatmap
+This tool generates a heatmap of cryptocurrencies. If the user specifies a number, it will show the top N coins by their full names; otherwise, it will default to the top 100.
 
-4. showStockNews
-This tool shows the latest news and events for a stock or cryptocurrency.
+4. showCryptocurrencyPriceList
+This tool generates a price list of cryptocurrencies. If no coins are mentioned, it returns an empty result. If coins are mentioned, it returns the prices for those coins using their full names.
 
-5. showStockScreener
-This tool shows a generic stock screener which can be used to find new stocks based on financial or technical parameters.
+5. getCryptocurrencyValue
+This tool retrieves the value of a cryptocurrency. The response will use the cryptocurrency's full name, regardless of the quantity specified.
 
-6. showMarketOverview
-This tool shows an overview of today's stock, futures, bond, and forex market performance including change values, Open, High, Low, and Close values.
+6. getCryptocurrencyDetails
+This tool retrieves detailed information about a cryptocurrency, such as market cap, market cap rank, 24-hour trading volume, and highest/lowest prices. The response will use the cryptocurrency's full name, regardless of the quantity specified.
 
-7. showMarketHeatmap
-This tool shows a heatmap of today's stock market performance across sectors.
+7. getCryptocurrencyDetailsWithExchanges
+This tool retrieves detailed information about a cryptocurrency, such as market cap, market cap rank, 24-hour trading volume, and highest/lowest prices, along with real-time prices from various cryptocurrency exchanges. The response will use the cryptocurrency's full name, regardless of the quantity specified.
 
-8. showTrendingStocks
-This tool shows the daily top trending stocks including the top five gaining, losing, and most active stocks based on today's performance.
-
-9. showETFHeatmap
-This tool shows a heatmap of today's ETF market performance across sectors and asset classes.
 
 
 You have just called a tool (` +
-    toolName +
-    ` for ` +
-    stockString +
-    `) to respond to the user. Now generate text to go alongside that tool response, which may be a graphic like a chart or price history.
+        toolName +
+        ` for ` +
+        stockString +
+        `) to respond to the user. Now generate text to go alongside that tool response, which may be a graphic like a chart or price history.
   
 Example:
 
@@ -145,57 +143,59 @@ Your response should be BRIEF, about 2-3 sentences.
 Besides the symbol, you cannot customize any of the screeners or graphics. Do not tell the user that you can.
     `
 
-  try {
-    const response = await generateText({
-      model: LlamaEdge(modelName),
-      messages: [
-        {
-          role: 'system',
-          content: captionSystemMessage
-        },
-        ...aiState.get().messages.map((message: any) => ({
-          role: message.role,
-          content: message.content,
-          name: message.name
-        }))
-      ]
-    })
-    return response.text || ''
-  } catch (err) {
-    return '' // Send tool use without caption.
-  }
+    try {
+        const response = await generateText({
+            // model: LlamaEdge(TOOL_MODEL),
+            model: LlamaEdge(modelName),
+            messages: [
+                {
+                    role: 'system',
+                    content: captionSystemMessage
+                },
+                ...aiState.get().messages.map((message: any) => ({
+                    role: message.role,
+                    content: message.content,
+                    name: message.name
+                }))
+            ]
+        })
+        return response.text || ''
+    } catch (err) {
+        // console.log(err)
+        return '' // Send tool use without caption.
+    }
 }
 
 async function submitUserMessage(content: string) {
-  'use server'
+    'use server'
 
-  const aiState = getMutableAIState<typeof AI>()
+    const aiState = getMutableAIState<typeof AI>()
 
-  aiState.update({
-    ...aiState.get(),
-    messages: [
-      ...aiState.get().messages,
-      {
-        id: nanoid(),
-        role: 'user',
-        content
-      }
-    ]
-  })
+    aiState.update({
+        ...aiState.get(),
+        messages: [
+            ...aiState.get().messages,
+            {
+                id: nanoid(),
+                role: 'user',
+                content
+            }
+        ]
+    })
 
-  let textStream: undefined | ReturnType<typeof createStreamableValue<string>>
-  let textNode: undefined | React.ReactNode
+    let textStream: undefined | ReturnType<typeof createStreamableValue<string>>
+    let textNode: undefined | React.ReactNode
 
-  try {
-    const LlamaEdge = createOpenAI({
-      baseURL: baseUrl,
-      apiKey: apiKey
-    });
-    const result = await streamUI({
-      model: LlamaEdge(modelName),
-      initial: <SpinnerMessage />,
-      maxRetries: 1,
-      system: `\
+    try {
+        const LlamaEdge = createOpenAI({
+            baseURL: baseUrl,
+            apiKey: apiKey
+        });
+        const result = await streamUI({
+            model: LlamaEdge(modelName),
+            initial: <SpinnerMessage/>,
+            maxRetries: 1,
+            system: `\
 You are a stock market conversation bot. You can provide the user information about stocks include prices and charts in the UI. You do not have access to any information and should only provide information by calling functions.
 
 ### Cryptocurrency Tickers
@@ -214,628 +214,543 @@ Example 2:
 User: What is the price of AAPL?
 Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function": { "name": "showStockPrice" }, "parameters": { "symbol": "AAPL" } } } 
     `,
-      messages: [
-        ...aiState.get().messages.map((message: any) => ({
-          role: message.role,
-          content: message.content,
-          name: message.name
-        }))
-      ],
-      text: ({ content, done, delta }) => {
-        if (!textStream) {
-          textStream = createStreamableValue('')
-          textNode = <BotMessage content={textStream.value} />
-        }
-
-        if (done) {
-          textStream.done()
-          aiState.done({
-            ...aiState.get(),
             messages: [
-              ...aiState.get().messages,
-              {
-                id: nanoid(),
-                role: 'assistant',
-                content
-              }
-            ]
-          })
-        } else {
-          textStream.update(delta)
+                ...aiState.get().messages.map((message: any) => ({
+                    role: message.role,
+                    content: message.content,
+                    name: message.name
+                }))
+            ],
+            text: ({content, done, delta}) => {
+                if (!textStream) {
+                    textStream = createStreamableValue('')
+                    textNode = <BotMessage content={textStream.value}/>
+                }
+
+                if (done) {
+                    textStream.done()
+                    aiState.done({
+                        ...aiState.get(),
+                        messages: [
+                            ...aiState.get().messages,
+                            {
+                                id: nanoid(),
+                                role: 'assistant',
+                                content
+                            }
+                        ]
+                    })
+                } else {
+                    textStream.update(delta)
+                }
+                return textNode
+            },
+            tools: {
+                showCryptocurrencyChart: {
+                    description:
+                        'Show a cryptocurrency chart of a given coin by its full name. Use this to show the chart to the user.',
+                    parameters: z.object({
+                        symbol: z
+                            .string()
+                            .describe(
+                                'The name of the cryptocurrency. e.g. bitcoin/ethereum/tether.'
+                            )
+                    }),
+
+                    generate: async function* ({symbol}) {
+                        yield (
+                            <BotCard>
+                                <></>
+                            </BotCard>
+                        )
+
+                        const toolCallId = nanoid()
+
+                        aiState.done({
+                            ...aiState.get(),
+                            messages: [
+                                ...aiState.get().messages,
+                                {
+                                    id: nanoid(),
+                                    role: 'assistant',
+                                    content: [
+                                        {
+                                            type: 'tool-call',
+                                            toolName: 'showCryptocurrencyChart',
+                                            toolCallId,
+                                            args: {symbol}
+                                        }
+                                    ]
+                                },
+                                {
+                                    id: nanoid(),
+                                    role: 'tool',
+                                    content: [
+                                        {
+                                            type: 'tool-result',
+                                            toolName: 'showCryptocurrencyChart',
+                                            toolCallId,
+                                            result: {symbol}
+                                        }
+                                    ]
+                                }
+                            ]
+                        })
+
+                        const caption = await generateCaption(
+                            symbol,
+                            [],
+                            'showCryptocurrencyChart',
+                            aiState
+                        )
+                        console.log("showCryptocurrencyChart-symbol", symbol)
+
+                        return (
+                            <BotCard>
+                                <CryptocurrencyChart symbol={symbol}/>
+                                {caption}
+                            </BotCard>
+                        )
+                    }
+                },
+                showCryptocurrencyComparisonChart: {
+                    description:
+                        'Show a comparison chart of 2 or more cryptocurrencies by their full names(like "bitcoin"). Use this to show the chart to the user.',
+                    parameters: z.object({
+                        symbol: z
+                            .string()
+                            .describe(
+                                'Optional list of full names to compare. e.g. "cardano,solana"'
+                            )
+                    }),
+
+                    generate: async function* ({symbol}) {
+                        yield (
+                            <BotCard>
+                                <></>
+                            </BotCard>
+                        )
+
+                        const toolCallId = nanoid()
+
+                        aiState.done({
+                            ...aiState.get(),
+                            messages: [
+                                ...aiState.get().messages,
+                                {
+                                    id: nanoid(),
+                                    role: 'assistant',
+                                    content: [
+                                        {
+                                            type: 'tool-call',
+                                            toolName: 'showCryptocurrencyComparisonChart',
+                                            toolCallId,
+                                            args: {symbol}
+                                        }
+                                    ]
+                                },
+                                {
+                                    id: nanoid(),
+                                    role: 'tool',
+                                    content: [
+                                        {
+                                            type: 'tool-result',
+                                            toolName: 'showCryptocurrencyComparisonChart',
+                                            toolCallId,
+                                            result: {symbol}
+                                        }
+                                    ]
+                                }
+                            ]
+                        })
+
+                        const caption = await generateCaption(
+                            symbol,
+                            [],
+                            'showCryptocurrencyComparisonChart',
+                            aiState
+                        )
+                        console.log("showCryptocurrencyComparisonChart-symbol", symbol)
+
+                        return (
+                            <BotCard>
+                                <CryptocurrencyComparisonChart symbol={symbol}/>
+                                {caption}
+                            </BotCard>
+                        )
+                    }
+                },
+                showCryptocurrencyHeatmap: {
+                    description:
+                        'Generate a cryptocurrency heatmap showing the top coins by their full names. If the user specifies a number, show that many top coins. Otherwise, show the top 100 coins.',
+                    parameters: z.object({
+                        symbol: z
+                            .string()
+                            .describe(
+                                'The number of top cryptocurrencies to display. If not provided, defaults to "100"'
+                            )
+                    }),
+
+                    generate: async function* ({symbol}) {
+                        yield (
+                            <BotCard>
+                                <></>
+                            </BotCard>
+                        )
+
+                        const toolCallId = nanoid()
+
+                        aiState.done({
+                            ...aiState.get(),
+                            messages: [
+                                ...aiState.get().messages,
+                                {
+                                    id: nanoid(),
+                                    role: 'assistant',
+                                    content: [
+                                        {
+                                            type: 'tool-call',
+                                            toolName: 'showCryptocurrencyHeatmap',
+                                            toolCallId,
+                                            args: {symbol}
+                                        }
+                                    ]
+                                },
+                                {
+                                    id: nanoid(),
+                                    role: 'tool',
+                                    content: [
+                                        {
+                                            type: 'tool-result',
+                                            toolName: 'showCryptocurrencyHeatmap',
+                                            toolCallId,
+                                            result: {symbol}
+                                        }
+                                    ]
+                                }
+                            ]
+                        })
+
+                        const caption = await generateCaption(
+                            symbol,
+                            [],
+                            'showCryptocurrencyHeatmap',
+                            aiState
+                        )
+                        console.log("showCryptocurrencyHeatmap-symbol", symbol)
+
+                        return (
+                            <BotCard>
+                                <CryptocurrencyHeatmap symbol={symbol}/>
+                                {caption}
+                            </BotCard>
+                        )
+                    }
+                },
+                showCryptocurrencyPriceList: {
+                    description:
+                        'Generate a list of cryptocurrency prices. If no specific coins are mentioned, return an empty result. If specific coins are mentioned, return their prices using their full names.',
+                    parameters: z.object({
+                        symbol: z
+                            .string()
+                            .describe(
+                                'The full names of the cryptocurrencies to display prices for. If none are mentioned, the result will be empty.'
+                            )
+                    }),
+
+                    generate: async function* ({symbol}) {
+                        yield (
+                            <BotCard>
+                                <></>
+                            </BotCard>
+                        )
+
+                        const toolCallId = nanoid()
+
+                        aiState.done({
+                            ...aiState.get(),
+                            messages: [
+                                ...aiState.get().messages,
+                                {
+                                    id: nanoid(),
+                                    role: 'assistant',
+                                    content: [
+                                        {
+                                            type: 'tool-call',
+                                            toolName: 'showCryptocurrencyPriceList',
+                                            toolCallId,
+                                            args: {symbol}
+                                        }
+                                    ]
+                                },
+                                {
+                                    id: nanoid(),
+                                    role: 'tool',
+                                    content: [
+                                        {
+                                            type: 'tool-result',
+                                            toolName: 'showCryptocurrencyPriceList',
+                                            toolCallId,
+                                            result: {symbol}
+                                        }
+                                    ]
+                                }
+                            ]
+                        })
+
+                        const caption = await generateCaption(
+                            symbol,
+                            [],
+                            'showCryptocurrencyPriceList',
+                            aiState
+                        )
+                        console.log("showCryptocurrencyPriceList-symbol", symbol)
+
+                        return (
+                            <BotCard>
+                                <CryptocurrencyPriceList symbol={symbol}/>
+                                {caption}
+                            </BotCard>
+                        )
+                    }
+                },
+                getCryptocurrencyValue: {
+                    description:
+                        "Get the value of a cryptocurrency, regardless of the quantity specified. Always return the value using the cryptocurrency's full name.",
+                    parameters: z.object({
+                        symbol: z
+                            .string()
+                            .describe(
+                                'The full name of the cryptocurrency to get the value for.'
+                            )
+                    }),
+
+                    generate: async function* ({symbol}) {
+                        yield (
+                            <BotCard>
+                                <></>
+                            </BotCard>
+                        )
+
+                        const toolCallId = nanoid()
+
+                        aiState.done({
+                            ...aiState.get(),
+                            messages: [
+                                ...aiState.get().messages,
+                                {
+                                    id: nanoid(),
+                                    role: 'assistant',
+                                    content: [
+                                        {
+                                            type: 'tool-call',
+                                            toolName: 'getCryptocurrencyValue',
+                                            toolCallId,
+                                            args: {symbol}
+                                        }
+                                    ]
+                                },
+                                {
+                                    id: nanoid(),
+                                    role: 'tool',
+                                    content: [
+                                        {
+                                            type: 'tool-result',
+                                            toolName: 'getCryptocurrencyValue',
+                                            toolCallId,
+                                            result: {symbol}
+                                        }
+                                    ]
+                                }
+                            ]
+                        })
+
+                        const caption = await generateCaption(
+                            symbol,
+                            [],
+                            'getCryptocurrencyValue',
+                            aiState
+                        )
+                        console.log("getCryptocurrencyValue-symbol", symbol)
+
+                        return (
+                            <BotCard>
+                                <CryptocurrencyValue symbol={symbol}/>
+                                {caption}
+                            </BotCard>
+                        )
+                    }
+                },
+                getCryptocurrencyDetails: {
+                    description:
+                        "Get detailed information about a cryptocurrency, including market cap, market cap rank, 24-hour trading volume, and highest/lowest prices. Always return the data using the cryptocurrency's full name, regardless of the quantity specified.",
+                    parameters: z.object({
+                        symbol: z
+                            .string()
+                            .describe(
+                                'The full name of the cryptocurrency to get detailed data for.'
+                            )
+                    }),
+
+                    generate: async function* ({symbol}) {
+                        yield (
+                            <BotCard>
+                                <></>
+                            </BotCard>
+                        )
+
+                        const toolCallId = nanoid()
+
+                        aiState.done({
+                            ...aiState.get(),
+                            messages: [
+                                ...aiState.get().messages,
+                                {
+                                    id: nanoid(),
+                                    role: 'assistant',
+                                    content: [
+                                        {
+                                            type: 'tool-call',
+                                            toolName: 'getCryptocurrencyDetails',
+                                            toolCallId,
+                                            args: {symbol}
+                                        }
+                                    ]
+                                },
+                                {
+                                    id: nanoid(),
+                                    role: 'tool',
+                                    content: [
+                                        {
+                                            type: 'tool-result',
+                                            toolName: 'getCryptocurrencyDetails',
+                                            toolCallId,
+                                            result: {symbol}
+                                        }
+                                    ]
+                                }
+                            ]
+                        })
+
+                        const caption = await generateCaption(
+                            symbol,
+                            [],
+                            'getCryptocurrencyDetails',
+                            aiState
+                        )
+                        console.log("getCryptocurrencyDetails-symbol", symbol)
+
+                        return (
+                            <BotCard>
+                                <CryptocurrencyDetails symbol={symbol}/>
+                                {caption}
+                            </BotCard>
+                        )
+                    }
+                },
+                getCryptocurrencyDetailsWithExchanges: {
+                    description:
+                        "Get detailed information about a cryptocurrency, including market cap, market cap rank, 24-hour trading volume, and highest/lowest prices. Additionally, provide real-time prices from various cryptocurrency exchanges. Always return the data using the cryptocurrency's full name, regardless of the quantity specified.",
+                    parameters: z.object({
+                        symbol: z
+                            .string()
+                            .describe(
+                                'The full name of the cryptocurrency to get detailed data and exchange prices for.'
+                            )
+                    }),
+
+                    generate: async function* ({symbol}) {
+                        yield (
+                            <BotCard>
+                                <></>
+                            </BotCard>
+                        )
+
+                        const toolCallId = nanoid()
+
+                        aiState.done({
+                            ...aiState.get(),
+                            messages: [
+                                ...aiState.get().messages,
+                                {
+                                    id: nanoid(),
+                                    role: 'assistant',
+                                    content: [
+                                        {
+                                            type: 'tool-call',
+                                            toolName: 'getCryptocurrencyDetailsWithExchanges',
+                                            toolCallId,
+                                            args: {symbol}
+                                        }
+                                    ]
+                                },
+                                {
+                                    id: nanoid(),
+                                    role: 'tool',
+                                    content: [
+                                        {
+                                            type: 'tool-result',
+                                            toolName: 'getCryptocurrencyDetailsWithExchanges',
+                                            toolCallId,
+                                            result: {symbol}
+                                        }
+                                    ]
+                                }
+                            ]
+                        })
+
+                        const caption = await generateCaption(
+                            symbol,
+                            [],
+                            'getCryptocurrencyDetailsWithExchanges',
+                            aiState
+                        )
+                        console.log("getCryptocurrencyDetailsWithExchanges-symbol", symbol)
+
+                        return (
+                            <BotCard>
+                                <CryptocurrencyDetailsWithExchanges symbol={symbol}/>
+                                {caption}
+                            </BotCard>
+                        )
+                    }
+                }
+            }
+        })
+
+        return {
+            id: nanoid(),
+            display: result.value
         }
-        return textNode
-      },
-      tools: {
-        showStockChart: {
-          description:
-            'Show a stock chart of a given stock. Optionally show 2 or more stocks. Use this to show the chart to the user.',
-          parameters: z.object({
-            symbol: z
-              .string()
-              .describe(
-                'The name or symbol of the stock or currency. e.g. DOGE/AAPL/USD.'
-              ),
-            comparisonSymbols: z.array(z.object({
-              symbol: z.string(),
-              position: z.literal("SameScale")
-            }))
-              .default([])
-              .describe(
-                'Optional list of symbols to compare. e.g. ["MSFT", "GOOGL"]'
-              )
-          }),
-
-          generate: async function* ({ symbol, comparisonSymbols }) {
-            yield (
-              <BotCard>
-                <></>
-              </BotCard>
-            )
-
-            const toolCallId = nanoid()
-
-            aiState.done({
-              ...aiState.get(),
-              messages: [
-                ...aiState.get().messages,
-                {
-                  id: nanoid(),
-                  role: 'assistant',
-                  content: [
-                    {
-                      type: 'tool-call',
-                      toolName: 'showStockChart',
-                      toolCallId,
-                      args: { symbol, comparisonSymbols }
-                    }
-                  ]
-                },
-                {
-                  id: nanoid(),
-                  role: 'tool',
-                  content: [
-                    {
-                      type: 'tool-result',
-                      toolName: 'showStockChart',
-                      toolCallId,
-                      result: { symbol, comparisonSymbols }
-                    }
-                  ]
-                }
-              ]
-            })
-
-            const caption = await generateCaption(
-              symbol,
-              comparisonSymbols,
-              'showStockChart',
-              aiState
-            )
-
-            return (
-              <BotCard>
-                <StockChart symbol={symbol} comparisonSymbols={comparisonSymbols} />
-                {caption}
-              </BotCard>
-            )
-          }
-        },
-        showStockPrice: {
-          description:
-            'Show the price of a given stock. Use this to show the price and price history to the user.',
-          parameters: z.object({
-            symbol: z
-              .string()
-              .describe(
-                'The name or symbol of the stock or currency. e.g. DOGE/AAPL/USD.'
-              )
-          }),
-          generate: async function* ({ symbol }) {
-            yield (
-              <BotCard>
-                <></>
-              </BotCard>
-            )
-
-            const toolCallId = nanoid()
-
-            aiState.done({
-              ...aiState.get(),
-              messages: [
-                ...aiState.get().messages,
-                {
-                  id: nanoid(),
-                  role: 'assistant',
-                  content: [
-                    {
-                      type: 'tool-call',
-                      toolName: 'showStockPrice',
-                      toolCallId,
-                      args: { symbol }
-                    }
-                  ]
-                },
-                {
-                  id: nanoid(),
-                  role: 'tool',
-                  content: [
-                    {
-                      type: 'tool-result',
-                      toolName: 'showStockPrice',
-                      toolCallId,
-                      result: { symbol }
-                    }
-                  ]
-                }
-              ]
-            })
-            const caption = await generateCaption(
-              symbol,
-              [],
-              'showStockPrice',
-              aiState
-            )
-
-            return (
-              <BotCard>
-                <StockPrice props={symbol} />
-                {caption}
-              </BotCard>
-            )
-          }
-        },
-        showStockFinancials: {
-          description:
-            'Show the financials of a given stock. Use this to show the financials to the user.',
-          parameters: z.object({
-            symbol: z
-              .string()
-              .describe(
-                'The name or symbol of the stock or currency. e.g. DOGE/AAPL/USD.'
-              )
-          }),
-          generate: async function* ({ symbol }) {
-            yield (
-              <BotCard>
-                <></>
-              </BotCard>
-            )
-
-            const toolCallId = nanoid()
-
-            aiState.done({
-              ...aiState.get(),
-              messages: [
-                ...aiState.get().messages,
-                {
-                  id: nanoid(),
-                  role: 'assistant',
-                  content: [
-                    {
-                      type: 'tool-call',
-                      toolName: 'showStockFinancials',
-                      toolCallId,
-                      args: { symbol }
-                    }
-                  ]
-                },
-                {
-                  id: nanoid(),
-                  role: 'tool',
-                  content: [
-                    {
-                      type: 'tool-result',
-                      toolName: 'showStockFinancials',
-                      toolCallId,
-                      result: { symbol }
-                    }
-                  ]
-                }
-              ]
-            })
-
-            const caption = await generateCaption(
-              symbol,
-              [],
-              'StockFinancials',
-              aiState
-            )
-
-            return (
-              <BotCard>
-                <StockFinancials props={symbol} />
-                {caption}
-              </BotCard>
-            )
-          }
-        },
-        showStockNews: {
-          description:
-            'This tool shows the latest news and events for a stock or cryptocurrency.',
-          parameters: z.object({
-            symbol: z
-              .string()
-              .describe(
-                'The name or symbol of the stock or currency. e.g. DOGE/AAPL/USD.'
-              )
-          }),
-          generate: async function* ({ symbol }) {
-            yield (
-              <BotCard>
-                <></>
-              </BotCard>
-            )
-
-            const toolCallId = nanoid()
-
-            aiState.done({
-              ...aiState.get(),
-              messages: [
-                ...aiState.get().messages,
-                {
-                  id: nanoid(),
-                  role: 'assistant',
-                  content: [
-                    {
-                      type: 'tool-call',
-                      toolName: 'showStockNews',
-                      toolCallId,
-                      args: { symbol }
-                    }
-                  ]
-                },
-                {
-                  id: nanoid(),
-                  role: 'tool',
-                  content: [
-                    {
-                      type: 'tool-result',
-                      toolName: 'showStockNews',
-                      toolCallId,
-                      result: { symbol }
-                    }
-                  ]
-                }
-              ]
-            })
-
-            const caption = await generateCaption(
-              symbol,
-              [],
-              'showStockNews',
-              aiState
-            )
-
-            return (
-              <BotCard>
-                <StockNews props={symbol} />
-                {caption}
-              </BotCard>
-            )
-          }
-        },
-        showStockScreener: {
-          description:
-            'This tool shows a generic stock screener which can be used to find new stocks based on financial or technical parameters.',
-          parameters: z.object({}),
-          generate: async function* ({ }) {
-            yield (
-              <BotCard>
-                <></>
-              </BotCard>
-            )
-
-            const toolCallId = nanoid()
-
-            aiState.done({
-              ...aiState.get(),
-              messages: [
-                ...aiState.get().messages,
-                {
-                  id: nanoid(),
-                  role: 'assistant',
-                  content: [
-                    {
-                      type: 'tool-call',
-                      toolName: 'showStockScreener',
-                      toolCallId,
-                      args: {}
-                    }
-                  ]
-                },
-                {
-                  id: nanoid(),
-                  role: 'tool',
-                  content: [
-                    {
-                      type: 'tool-result',
-                      toolName: 'showStockScreener',
-                      toolCallId,
-                      result: {}
-                    }
-                  ]
-                }
-              ]
-            })
-            const caption = await generateCaption(
-              'Generic',
-              [],
-              'showStockScreener',
-              aiState
-            )
-
-            return (
-              <BotCard>
-                <StockScreener />
-                {caption}
-              </BotCard>
-            )
-          }
-        },
-        showMarketOverview: {
-          description: `This tool shows an overview of today's stock, futures, bond, and forex market performance including change values, Open, High, Low, and Close values.`,
-          parameters: z.object({}),
-          generate: async function* ({ }) {
-            yield (
-              <BotCard>
-                <></>
-              </BotCard>
-            )
-
-            const toolCallId = nanoid()
-
-            aiState.done({
-              ...aiState.get(),
-              messages: [
-                ...aiState.get().messages,
-                {
-                  id: nanoid(),
-                  role: 'assistant',
-                  content: [
-                    {
-                      type: 'tool-call',
-                      toolName: 'showMarketOverview',
-                      toolCallId,
-                      args: {}
-                    }
-                  ]
-                },
-                {
-                  id: nanoid(),
-                  role: 'tool',
-                  content: [
-                    {
-                      type: 'tool-result',
-                      toolName: 'showMarketOverview',
-                      toolCallId,
-                      result: {}
-                    }
-                  ]
-                }
-              ]
-            })
-            const caption = await generateCaption(
-              'Generic',
-              [],
-              'showMarketOverview',
-              aiState
-            )
-
-            return (
-              <BotCard>
-                <MarketOverview />
-                {caption}
-              </BotCard>
-            )
-          }
-        },
-        showMarketHeatmap: {
-          description: `This tool shows a heatmap of today's stock market performance across sectors. It is preferred over showMarketOverview if asked specifically about the stock market.`,
-          parameters: z.object({}),
-          generate: async function* ({ }) {
-            yield (
-              <BotCard>
-                <></>
-              </BotCard>
-            )
-
-            const toolCallId = nanoid()
-
-            aiState.done({
-              ...aiState.get(),
-              messages: [
-                ...aiState.get().messages,
-                {
-                  id: nanoid(),
-                  role: 'assistant',
-                  content: [
-                    {
-                      type: 'tool-call',
-                      toolName: 'showMarketHeatmap',
-                      toolCallId,
-                      args: {}
-                    }
-                  ]
-                },
-                {
-                  id: nanoid(),
-                  role: 'tool',
-                  content: [
-                    {
-                      type: 'tool-result',
-                      toolName: 'showMarketHeatmap',
-                      toolCallId,
-                      result: {}
-                    }
-                  ]
-                }
-              ]
-            })
-            const caption = await generateCaption(
-              'Generic',
-              [],
-              'showMarketHeatmap',
-              aiState
-            )
-
-            return (
-              <BotCard>
-                <MarketHeatmap />
-                {caption}
-              </BotCard>
-            )
-          }
-        },
-        showETFHeatmap: {
-          description: `This tool shows a heatmap of today's ETF performance across sectors and asset classes. It is preferred over showMarketOverview if asked specifically about the ETF market.`,
-          parameters: z.object({}),
-          generate: async function* ({ }) {
-            yield (
-              <BotCard>
-                <></>
-              </BotCard>
-            )
-
-            const toolCallId = nanoid()
-
-            aiState.done({
-              ...aiState.get(),
-              messages: [
-                ...aiState.get().messages,
-                {
-                  id: nanoid(),
-                  role: 'assistant',
-                  content: [
-                    {
-                      type: 'tool-call',
-                      toolName: 'showETFHeatmap',
-                      toolCallId,
-                      args: {}
-                    }
-                  ]
-                },
-                {
-                  id: nanoid(),
-                  role: 'tool',
-                  content: [
-                    {
-                      type: 'tool-result',
-                      toolName: 'showETFHeatmap',
-                      toolCallId,
-                      result: {}
-                    }
-                  ]
-                }
-              ]
-            })
-            const caption = await generateCaption(
-              'Generic',
-              [],
-              'showETFHeatmap',
-              aiState
-            )
-
-            return (
-              <BotCard>
-                <ETFHeatmap />
-                {caption}
-              </BotCard>
-            )
-          }
-        },
-        showTrendingStocks: {
-          description: `This tool shows the daily top trending stocks including the top five gaining, losing, and most active stocks based on today's performance`,
-          parameters: z.object({}),
-          generate: async function* ({ }) {
-            yield (
-              <BotCard>
-                <></>
-              </BotCard>
-            )
-
-            const toolCallId = nanoid()
-
-            aiState.done({
-              ...aiState.get(),
-              messages: [
-                ...aiState.get().messages,
-                {
-                  id: nanoid(),
-                  role: 'assistant',
-                  content: [
-                    {
-                      type: 'tool-call',
-                      toolName: 'showTrendingStocks',
-                      toolCallId,
-                      args: {}
-                    }
-                  ]
-                },
-                {
-                  id: nanoid(),
-                  role: 'tool',
-                  content: [
-                    {
-                      type: 'tool-result',
-                      toolName: 'showTrendingStocks',
-                      toolCallId,
-                      result: {}
-                    }
-                  ]
-                }
-              ]
-            })
-            const caption = await generateCaption(
-              'Generic',
-              [],
-              'showTrendingStocks',
-              aiState
-            )
-
-            return (
-              <BotCard>
-                <MarketTrending />
-                {caption}
-              </BotCard>
-            )
-          }
-        }
-      }
-    })
-
-    return {
-      id: nanoid(),
-      display: result.value
-    }
-  } catch (err: any) {
-    console.log(err)
-    return {
-      id: nanoid(),
-      display: (
-        <div className="border p-4">
-          <div className="text-red-700 font-medium">Error: {err.message}</div>
-          <a
-            href="https://github.com/bklieger-groq/stockbot-on-groq/issues"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center text-sm text-red-800 hover:text-red-900"
-          >
-            If you think something has gone wrong, create an
-            <span className="ml-1" style={{ textDecoration: 'underline' }}>
+    } catch (err: any) {
+        console.log(err)
+        return {
+            id: nanoid(),
+            display: (
+                <div className="border p-4">
+                    <div className="text-red-700 font-medium">Error: {err.message}</div>
+                    <a
+                        href="https://github.com/bklieger-groq/stockbot-on-groq/issues"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-sm text-red-800 hover:text-red-900"
+                    >
+                        If you think something has gone wrong, create an
+                        <span className="ml-1" style={{textDecoration: 'underline'}}>
               {' '}
-              issue on Github.
+                            issue on Github.
             </span>
-          </a>
-        </div>
-      )
+                    </a>
+                </div>
+            )
+        }
     }
-  }
 }
 
 export const AI = createAI<AIState, UIState>({
-  actions: {
-    submitUserMessage
-  },
-  initialUIState: [],
-  initialAIState: { chatId: nanoid(), messages: [] }
+    actions: {
+        submitUserMessage
+    },
+    initialUIState: [],
+    initialAIState: {chatId: nanoid(), messages: []}
 })

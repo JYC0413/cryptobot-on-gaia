@@ -33,34 +33,44 @@ export function ChatPanel({
 
   const exampleMessages = [
     {
-      heading: 'What is the price',
-      subheading: 'of Apple Inc.?',
-      message: 'What is the price of Apple stock?'
+      heading: 'Show me a cryptocurrency chart',
+      subheading: 'for BTC',
+      message: 'Show me a cryptocurrency chart for BTC'
     },
     {
-      heading: 'Show me a stock chart',
-      subheading: 'for $GOOGL',
-      message: 'Show me a stock chart for $GOOGL'
+      heading: 'Show me a cryptocurrency chart',
+      subheading: 'for ETH',
+      message: 'Show me a cryptocurrency chart for ETH'
     },
     {
-      heading: 'What are some recent',
-      subheading: `events about Amazon?`,
-      message: `What are some recent events about Amazon?`
+      heading: 'Show me a cryptocurrency chart',
+      subheading: 'for BTC and ETH',
+      message: 'Show me a cryptocurrency chart for BTC and ETH'
     },
     {
-      heading: `What are Microsoft's`,
-      subheading: 'latest financials?',
-      message: `What are Microsoft's latest financials?`
+      heading: 'Generate a cryptocurrency heatmap',
+      subheading: 'for the top 50 coins',
+      message: 'Generate a cryptocurrency heatmap for the top 50 coins'
     },
     {
-      heading: 'How is the stock market',
-      subheading: 'performing today by sector?',
-      message: `How is the stock market performing today by sector?`
+      heading: 'What is the value',
+      subheading: `of 1 bitcoin?`,
+      message: `What's the value of 1 bitcoin?`
     },
     {
-      heading: 'Show me a screener',
-      subheading: 'to find new stocks',
-      message: 'Show me a screener to find new stocks'
+      heading: `Show me the prices`,
+      subheading: 'for bitcoin, ethereum, and tether',
+      message: `Show me the prices for bitcoin, ethereum, and tether.`
+    },
+    {
+      heading: 'Give me detailed information',
+      subheading: 'about bitcoin',
+      message: `Give me detailed information about bitcoin`
+    },
+    {
+      heading: 'Give me detailed information and exchange prices',
+      subheading: 'for bitcoin',
+      message: 'Give me detailed information and exchange prices for bitcoin'
     }
   ]
 

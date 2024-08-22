@@ -6,7 +6,7 @@ import { AI } from '@/lib/chat/actions'
 import { Session } from '@/lib/types'
 
 export const metadata = {
-  title: 'StockBot powered by Gaianet'
+  title: 'CryptoBot powered by Gaia'
 }
 
 export default async function IndexPage() {

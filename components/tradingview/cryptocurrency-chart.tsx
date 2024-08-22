@@ -2,27 +2,16 @@
 
 import React, { useEffect, useRef, memo } from 'react'
 
-export function StockScreener({}) {
+export function CryptocurrencyChart({ symbol }: { symbol: string }) {
   const container = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!container.current) return
     const script = document.createElement('script')
     script.src =
-      'https://s3.tradingview.com/external-embedding/embed-widget-screener.js'
+      'https://widgets.coingecko.com/gecko-coin-price-chart-widget.js'
     script.type = 'text/javascript'
     script.async = true
-    script.innerHTML = JSON.stringify({
-      width: '100%',
-      height: '100%',
-      defaultColumn: 'overview',
-      defaultScreen: 'most_capitalized',
-      market: 'america',
-      showToolbar: true,
-      colorTheme: 'light',
-      locale: 'en',
-      isTransparent: true
-    })
 
     container.current.appendChild(script)
 
@@ -40,17 +29,14 @@ export function StockScreener({}) {
         ref={container}
         style={{ height: '100%', width: '100%' }}
       >
-        <div
-          className="tradingview-widget-container__widget"
-          style={{ height: 'calc(100% - 32px)', width: '100%' }}
-        ></div>
+        <gecko-coin-price-chart-widget locale="en" outlined="true" coin-id={symbol} initial-currency="usd"></gecko-coin-price-chart-widget>
         <div className="tradingview-widget-copyright">
           <a
-            href="https://www.tradingview.com/"
-            rel="noopener nofollow"
+              href="https://www.coingecko.com/"
+              rel="noopener nofollow"
             target="_blank"
           >
-            <span className="">Track all markets on TradingView</span>
+            <span className="">Track all markets on CoinGecko</span>
           </a>
         </div>
       </div>
@@ -58,4 +44,4 @@ export function StockScreener({}) {
   )
 }
 
-export default memo(StockScreener)
+export default memo(CryptocurrencyChart)
