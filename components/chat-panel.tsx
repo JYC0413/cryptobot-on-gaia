@@ -54,8 +54,8 @@ export function ChatPanel({
     },
     {
       heading: 'What is the value',
-      subheading: `of 1 bitcoin?`,
-      message: `What's the value of 1 bitcoin?`
+      subheading: `of bitcoin?`,
+      message: `What's the value of bitcoin?`
     },
     {
       heading: `Show me the prices`,

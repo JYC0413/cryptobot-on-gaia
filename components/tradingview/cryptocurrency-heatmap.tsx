@@ -31,13 +31,13 @@ export function CryptocurrencyHeatmap({ symbol }: { symbol: string }) {
         >
           {/* @ts-ignore */}
           <gecko-coin-heatmap-widget locale="en" outlined="true" top={symbol || "100"}></gecko-coin-heatmap-widget>
-          <div className="tradingview-widget-copyright">
+          <div className="tradingview-widget-copyright text-right text-gray-400">
             <a
                 href="https://www.coingecko.com/"
                 rel="noopener nofollow"
                 target="_blank"
             >
-              <span className="">Track all markets on CoinGecko</span>
+              <span>Track all markets on CoinGecko</span>
             </a>
           </div>
         </div>

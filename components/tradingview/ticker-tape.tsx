@@ -40,7 +40,7 @@ export function TickerTape() {
               rel="noopener nofollow"
               target="_blank"
           >
-            <span className="">Track all markets on CoinGecko</span>
+            <span>Track all markets on CoinGecko</span>
           </a>
         </div>
       </div>

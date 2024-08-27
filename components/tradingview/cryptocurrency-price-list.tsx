@@ -23,7 +23,7 @@ export function CryptocurrencyPriceList({ symbol }: { symbol: string }) {
   }, [])
 
   return (
-    <div style={{ height: '500px' }}>
+    <div>
       <div
           className="tradingview-widget-container"
           ref={container}
@@ -31,13 +31,13 @@ export function CryptocurrencyPriceList({ symbol }: { symbol: string }) {
       >
         {/* @ts-ignore */}
         <gecko-coin-list-widget locale="en" outlined="true" coin-ids={symbol} initial-currency="usd"></gecko-coin-list-widget>
-        <div className="tradingview-widget-copyright">
+        <div className="tradingview-widget-copyright text-right text-gray-400">
           <a
               href="https://www.coingecko.com/"
               rel="noopener nofollow"
               target="_blank"
           >
-            <span className="">Track all markets on CoinGecko</span>
+            <span>Track all markets on CoinGecko</span>
           </a>
         </div>
       </div>

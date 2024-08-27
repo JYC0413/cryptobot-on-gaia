@@ -23,12 +23,18 @@ export function Chat({id, className, session}: ChatProps) {
     const router = useRouter()
     const path = usePathname()
     const [input, setInput] = useState('')
+    const [isLoading, setLoading] = useState(false)
     const [messages] = useUIState()
     const [aiState] = useAIState()
 
     const [_, setNewChatId] = useLocalStorage('newChatId', id)
 
     useEffect(() => {
+        if(messages.length && messages.length % 2 === 0) {
+            setLoading(false)
+        }else {
+            setLoading(true)
+        }
         if (session?.user) {
             if (!path.includes('chat') && messages.length === 1) {
                 window.history.replaceState({}, '', `/chat/${id}`)
@@ -37,11 +43,11 @@ export function Chat({id, className, session}: ChatProps) {
     }, [id, path, session?.user, messages])
 
     useEffect(() => {
+        console.log("aiState",aiState.messages)
         const messagesLength = aiState.messages?.length
         if (messagesLength === 2) {
             router.refresh()
         }
-        console.log('Value: ', aiState.messages)
     }, [aiState.messages, router])
 
     useEffect(() => {
@@ -66,7 +72,7 @@ export function Chat({id, className, session}: ChatProps) {
                 ref={messagesRef}
             >
                 {messages.length ? (
-                    <ChatList messages={messages} isShared={false} session={session}/>
+                    <ChatList messages={messages} isLoading={isLoading} isShared={false} session={session}/>
                 ) : (
                     <EmptyScreen/>
                 )}

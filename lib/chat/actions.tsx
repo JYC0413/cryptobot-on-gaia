@@ -4,6 +4,7 @@ import {generateText} from 'ai'
 import {createAI, createStreamableValue, getMutableAIState, streamUI} from 'ai/rsc'
 import {createOpenAI} from '@ai-sdk/openai'
 
+
 import {BotCard, BotMessage, SpinnerMessage} from '@/components/stocks/message'
 
 import {z} from 'zod'
@@ -33,11 +34,11 @@ interface MutableAIState {
     get: () => AIState
 }
 
-const baseUrl = process.env.LLAMAEDGE_BASE_URL || "https://llamatool.us.gaianet.network/v1"
+const toolBaseUrl = process.env.LLAMAEDGE_TOOL_BASE_URL || "https://llamatool.us.gaianet.network/v1"
+const chatBaseUrl = process.env.LLAMAEDGE_CHAT_BASE_URL || "https://llama.us.gaianet.network/v1"
 const apiKey = process.env.LLAMAEDGE_API_KEY || "LLAMAEDGE"
-const GROQ_API_KEY_ENV = process.env.GROQ_API_KEY || "LLAMAEDGE"
-const TOOL_MODEL = 'llama3-70b-8192'
-const modelName = process.env.LLAMAEDGE_MODEL_NAME || "llama"
+const toolModelName = process.env.LLAMAEDGE_TOOL_MODEL_NAME || "llama"
+const chatModelName = process.env.LLAMAEDGE_CHAT_MODEL_NAME || "llama"
 
 type ComparisonSymbolObject = {
     symbol: string;
@@ -50,33 +51,23 @@ async function generateCaption(
     toolName: string,
     aiState: MutableAIState
 ): Promise<string> {
-    // const LlamaEdge = createOpenAI({
-    //   baseURL: 'https://api.groq.com/openai/v1',
-    //   apiKey: GROQ_API_KEY_ENV
-    // });
-
-    // const LlamaEdge = createOpenAI({
-    //   baseURL: "https://llama.us.gaianet.network/v1",
-    //   apiKey: apiKey
-    // });
 
     const LlamaEdge = createOpenAI({
-        baseURL: baseUrl,
+        baseURL: chatBaseUrl,
         apiKey: apiKey
     });
 
     const stockString = comparisonSymbols.length === 0
         ? symbol
         : [symbol, ...comparisonSymbols.map(obj => obj.symbol)].join(', ');
-    console.log("messages", [...aiState.get().messages])
-    aiState.update({
-        ...aiState.get(),
-        messages: [...aiState.get().messages]
-    })
+        aiState.update({
+            ...aiState.get(),
+            messages: [...aiState.get().messages]
+        })
 
     const captionSystemMessage =
         `\
-You are a stock market conversation bot. You can provide the user information about stocks include prices and charts in the UI. You do not have access to any information and should only provide information by calling functions.
+You are a financial assistant with a focus on cryptocurrencies. You can provide the user with information about cryptocurrencies, including prices and charts, using the tools provided. You primarily rely on the tools to deliver accurate information. However, if a query falls outside the scope of these tools, use your knowledge to assist the user where possible.
 
 These are the tools you have available:
 1. showCryptocurrencyChart
@@ -110,43 +101,43 @@ You have just called a tool (` +
   
 Example:
 
-User: What is the price of AAPL?
-Assistant: { "tool_call": { "id": "pending", "type": "function", "function": { "name": "showStockPrice" }, "parameters": { "symbol": "AAPL" } } } 
+User: What is the price of bitcoin?
 
-Assistant (you): The price of AAPL stock is provided above. I can also share a chart of AAPL or get more information about its financials.
+Assistant: { "tool_call": { "id": "pending", "type": "function", "function": { "name": "getCryptocurrencyValue" }, "parameters": { "name": "bitcoin" } } }
+
+Assistant (you): The price of bitcoin is provided above. I can also share a chart of bitcoin or get more detailed information about its market data.
 
 or
 
-Assistant (you): This is the price of AAPL stock. I can also generate a chart or share further financial data.
+Assistant (you): This is the price of bitcoin. I can also generate a chart or share further details such as market cap and trading volume.
 
 or 
-Assistant (you): Would you like to see a chart of AAPL or get more information about its financials?
+Assistant (you): Would you like to see a chart of bitcoin or gemore detailed market data?
 
 Example 2 :
 
-User: Compare AAPL and MSFT stock prices
-Assistant: { "tool_call": { "id": "pending", "type": "function", "function": { "name": "showStockChart" }, "parameters": { "symbol": "AAPL" , "comparisonSymbols" : [{"symbol": "MSFT", "position": "SameScale"}] } } } 
+User: Compare bitcoin and ethereum prices
+Assistant: { "tool_call": { "id": "pending", "type": "function", "function": { "name": "showCryptocurrencyChart" }, "parameters": { "name": "bitcoin", "comparisonSymbols": [{ "name": "ethereum", "position": "SameScale" }] } } }
 
-Assistant (you): The chart illustrates the recent price movements of Microsoft (MSFT) and Apple (AAPL) stocks. Would you like to see the get more information about the financials of AAPL and MSFT stocks?
+Assistant (you): The chart illustrates the recent price movements of bitcoin and ethereum. Would you like to see more detailed market data for bitcoin and ethereum?
 or
 
-Assistant (you): This is the chart for AAPL and MSFT stocks. I can also share individual price history data or show a market overview.
+Assistant (you): This is the chart for bitcoin and ethereum. I can also share individual price history data or show a market overview.
 
 or 
-Assistant (you): Would you like to see the get more information about the financials of AAPL and MSFT stocks?
+Assistant (you): Would you like to see more detailed market data for bitcoin and ethereum?
 
 ## Guidelines
-Talk like one of the above responses, but BE CREATIVE and generate a DIVERSE response. 
+Talk like one of the above responses, but BE CREATIVE and generate a DIVERSE response. Return without tool_call option
 
 Your response should be BRIEF, about 2-3 sentences.
 
-Besides the symbol, you cannot customize any of the screeners or graphics. Do not tell the user that you can.
+Besides the symbol, you cannot customize any of the screeners or graphics. Do not tell the user that you can. If a query is not directly related to cryptocurrencies, use your knowledge to assist the user as best as possible.
     `
 
     try {
         const response = await generateText({
-            // model: LlamaEdge(TOOL_MODEL),
-            model: LlamaEdge(modelName),
+            model: LlamaEdge(chatModelName),
             messages: [
                 {
                     role: 'system',
@@ -161,7 +152,7 @@ Besides the symbol, you cannot customize any of the screeners or graphics. Do no
         })
         return response.text || ''
     } catch (err) {
-        // console.log(err)
+        console.log("generateCaptionError",err)
         return '' // Send tool use without caption.
     }
 }
@@ -187,32 +178,38 @@ async function submitUserMessage(content: string) {
     let textNode: undefined | React.ReactNode
 
     try {
+        // yield {id:nanoid(),display:<div>1231231231313123123</div>};
         const LlamaEdge = createOpenAI({
-            baseURL: baseUrl,
+            baseURL: toolBaseUrl,
             apiKey: apiKey
         });
+        console.log("data")
+        console.log("messages",[
+            ...aiState.get().messages.map((message: any) => ({
+                role: message.role,
+                content: message.content,
+                name: message.name
+            }))
+        ])
         const result = await streamUI({
-            model: LlamaEdge(modelName),
+            model: LlamaEdge(toolModelName),
             initial: <SpinnerMessage/>,
             maxRetries: 1,
             system: `\
-You are a stock market conversation bot. You can provide the user information about stocks include prices and charts in the UI. You do not have access to any information and should only provide information by calling functions.
-
-### Cryptocurrency Tickers
-For any cryptocurrency, append "USD" at the end of the ticker when using functions. For instance, "DOGE" should be "DOGEUSD".
+You are a cryptocurrency market conversation bot. You can provide the user with information about cryptocurrencies, including prices and charts in the UI. Please avoid directly accessing information and instead provide responses primarily by calling functions. If the issue cannot be resolved through function calls, then use your knowledge to answer.
 
 ### Guidelines:
 
-Never provide empty results to the user. Provide the relevant tool if it matches the user's request. Otherwise, respond as the stock bot.
+Never provide empty results to the user. If a relevant tool matches the user's request, use it. Otherwise, try to respond to the user's question using your knowledge.
 Example:
 
-User: What is the price of AAPL?
-Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function": { "name": "showStockPrice" }, "parameters": { "symbol": "AAPL" } } } 
+User: What is the price of bitcoin?
+Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function": { "name": "getCryptocurrencyValue" }, "parameters": { "name": "bitcoin" } } }
 
 Example 2:
 
-User: What is the price of AAPL?
-Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function": { "name": "showStockPrice" }, "parameters": { "symbol": "AAPL" } } } 
+User: What is the price of ethereum?
+Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function": { "name": "getCryptocurrencyValue" }, "parameters": { "name": "ethereum" } } }
     `,
             messages: [
                 ...aiState.get().messages.map((message: any) => ({
@@ -221,13 +218,38 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                     name: message.name
                 }))
             ],
-            text: ({content, done, delta}) => {
+            text: async ({content, done, delta}) => {
                 if (!textStream) {
                     textStream = createStreamableValue('')
                     textNode = <BotMessage content={textStream.value}/>
                 }
-
-                if (done) {
+                try{
+                    JSON.parse(content)
+                    if (done) {
+                        textStream.done()
+                        aiState.done({
+                            ...aiState.get(),
+                            messages: [
+                                ...aiState.get().messages,
+                                {
+                                    id: nanoid(),
+                                    role: 'assistant',
+                                    content
+                                }
+                            ]
+                        })
+                    } else {
+                        textStream.update(delta)
+                    }
+                    return textNode
+                }catch (e) {
+                    const chatContent = await generateCaption(
+                        "",
+                        [],
+                        '',
+                        aiState
+                    )
+                    console.log("chatContent",chatContent)
                     textStream.done()
                     aiState.done({
                         ...aiState.get(),
@@ -236,14 +258,12 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             {
                                 id: nanoid(),
                                 role: 'assistant',
-                                content
+                                chatContent
                             }
                         ]
                     })
-                } else {
-                    textStream.update(delta)
+                    return <BotMessage content={chatContent}/>
                 }
-                return textNode
             },
             tools: {
                 showCryptocurrencyChart: {
@@ -303,7 +323,6 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             'showCryptocurrencyChart',
                             aiState
                         )
-                        console.log("showCryptocurrencyChart-symbol", symbol)
 
                         return (
                             <BotCard>
@@ -370,7 +389,6 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             'showCryptocurrencyComparisonChart',
                             aiState
                         )
-                        console.log("showCryptocurrencyComparisonChart-symbol", symbol)
 
                         return (
                             <BotCard>
@@ -437,7 +455,6 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             'showCryptocurrencyHeatmap',
                             aiState
                         )
-                        console.log("showCryptocurrencyHeatmap-symbol", symbol)
 
                         return (
                             <BotCard>
@@ -504,7 +521,6 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             'showCryptocurrencyPriceList',
                             aiState
                         )
-                        console.log("showCryptocurrencyPriceList-symbol", symbol)
 
                         return (
                             <BotCard>
@@ -571,7 +587,6 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             'getCryptocurrencyValue',
                             aiState
                         )
-                        console.log("getCryptocurrencyValue-symbol", symbol)
 
                         return (
                             <BotCard>
@@ -638,7 +653,6 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             'getCryptocurrencyDetails',
                             aiState
                         )
-                        console.log("getCryptocurrencyDetails-symbol", symbol)
 
                         return (
                             <BotCard>
@@ -705,7 +719,6 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             'getCryptocurrencyDetailsWithExchanges',
                             aiState
                         )
-                        console.log("getCryptocurrencyDetailsWithExchanges-symbol", symbol)
 
                         return (
                             <BotCard>
@@ -723,7 +736,7 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
             display: result.value
         }
     } catch (err: any) {
-        console.log(err)
+        console.log("toolError",err)
         return {
             id: nanoid(),
             display: (
