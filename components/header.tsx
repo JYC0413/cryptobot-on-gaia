@@ -19,10 +19,10 @@ async function UserOrLogin() {
         {/* <IconGroq className="size-6 mr-2 dark:hidden" />
           <IconGroq className="hidden size-6 mr-2 dark:block" /> */}
         <Image
-          src="https://www.gaianet.ai/imgs/logo.png"
+          src="https://www.gaianet.ai/images/logo-dark.png"
           alt="GroqLabs Logo"
-          width={100}
-          height={30}
+          width={50}
+          height={10}
         />
       </Link>
 
