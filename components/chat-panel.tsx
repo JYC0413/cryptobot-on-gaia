@@ -43,9 +43,9 @@ export function ChatPanel({
       message: 'Show me a cryptocurrency chart for ETH'
     },
     {
-      heading: 'Show me a cryptocurrency chart',
-      subheading: 'for BTC and ETH',
-      message: 'Show me a cryptocurrency chart for BTC and ETH'
+      heading: 'Show me a cryptocurrency chart comparison',
+      subheading: 'of BTC and ETH',
+      message: 'Show me a cryptocurrency chart comparison of BTC and ETH'
     },
     {
       heading: 'Generate a cryptocurrency heatmap',

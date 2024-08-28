@@ -71,10 +71,10 @@ You are a financial assistant with a focus on cryptocurrencies. You can provide 
 
 These are the tools you have available:
 1. showCryptocurrencyChart
-This tool shows a cryptocurrency chart for a given coin using its full name.
+This tool shows a chart for a single cryptocurrency using its full name. Use this when only one cryptocurrency is mentioned.
 
 2. showCryptocurrencyComparisonChart
-This tool shows a comparison chart for 2 or more cryptocurrencies using their full names.
+This tool shows a comparison chart for two or more cryptocurrencies using their full names. Use this when the user mentions more than one cryptocurrency.
 
 3. showCryptocurrencyHeatmap
 This tool generates a heatmap of cryptocurrencies. If the user specifies a number, it will show the top N coins by their full names; otherwise, it will default to the top 100.
@@ -115,7 +115,7 @@ Assistant (you): Would you like to see a chart of bitcoin or gemore detailed mar
 Example 2 :
 
 User: Compare bitcoin and ethereum prices
-Assistant: { "tool_call": { "id": "pending", "type": "function", "function": { "name": "showCryptocurrencyChart" }, "parameters": { "name": "bitcoin", "comparisonSymbols": [{ "name": "ethereum", "position": "SameScale" }] } } }
+Assistant: { "tool_call": { "id": "pending", "type": "function", "function": { "name": "showCryptocurrencyComparisonChart" }, "parameters": { "name": "bitcoin", "comparisonSymbols": [{ "name": "ethereum", "position": "SameScale" }] } } }
 
 Assistant (you): The chart illustrates the recent price movements of bitcoin and ethereum. Would you like to see more detailed market data for bitcoin and ethereum?
 or
@@ -316,6 +316,8 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             aiState
                         )
 
+                        console.log("showCryptocurrencyChart",symbol)
+
                         return (
                             <BotCard>
                                 <CryptocurrencyChart symbol={symbol}/>
@@ -381,6 +383,8 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             'showCryptocurrencyComparisonChart',
                             aiState
                         )
+
+                        console.log("showCryptocurrencyComparisonChart",symbol)
 
                         return (
                             <BotCard>
