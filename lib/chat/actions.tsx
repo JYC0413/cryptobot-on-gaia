@@ -91,8 +91,6 @@ This tool retrieves detailed information about a cryptocurrency, such as market 
 7. getCryptocurrencyDetailsWithExchanges
 This tool retrieves detailed information about a cryptocurrency, such as market cap, market cap rank, 24-hour trading volume, and highest/lowest prices, along with real-time prices from various cryptocurrency exchanges. The response will use the cryptocurrency's full name, regardless of the quantity specified.
 
-
-
 You have just called a tool (` +
         toolName +
         ` for ` +
@@ -131,7 +129,7 @@ Assistant (you): Would you like to see more detailed market data for bitcoin and
 From the above examples, you should be able to understand that your role is just to help summarize, not to answer the questions raised by users. When users ask about the price of Bitcoin, you only need to summarize, not give the exact price.
 
 ## Guidelines
-Talk like one of the above responses, but BE CREATIVE and generate a DIVERSE response. Return without tool_call option
+Talk like one of the above responses, but BE CREATIVE and generate a DIVERSE response. Return without tool_call option, without current prices
 
 Your response should be BRIEF, about 2-3 sentences.
 
