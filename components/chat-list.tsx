@@ -6,6 +6,7 @@ import {SpinnerMessage} from "@/components/stocks/message";
 export interface ChatList {
     messages: UIState
     session?: Session
+    isLoading: boolean
     isShared: boolean
 }
 

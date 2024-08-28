@@ -60,14 +60,14 @@ async function generateCaption(
     const stockString = comparisonSymbols.length === 0
         ? symbol
         : [symbol, ...comparisonSymbols.map(obj => obj.symbol)].join(', ');
-        aiState.update({
-            ...aiState.get(),
-            messages: [...aiState.get().messages]
-        })
+    aiState.update({
+        ...aiState.get(),
+        messages: [...aiState.get().messages]
+    })
 
     const captionSystemMessage =
         `\
-You are a financial assistant with a focus on cryptocurrencies. You can provide the user with information about cryptocurrencies, including prices and charts, using the tools provided. You primarily rely on the tools to deliver accurate information. However, if a query falls outside the scope of these tools, use your knowledge to assist the user where possible.
+You are a crypto market conversation bot. You can provide the user information about stocks include prices and charts in the UI. You do not have access to any information and should only provide information by calling functions.
 
 These are the tools you have available:
 1. showCryptocurrencyChart
@@ -128,7 +128,7 @@ or
 Assistant (you): Would you like to see more detailed market data for bitcoin and ethereum?
 
 ## Guidelines
-Talk like one of the above responses, but BE CREATIVE and generate a DIVERSE response. Return without tool_call option
+Talk like one of the above responses, but BE CREATIVE and generate a DIVERSE response. Return without tool_call option, without current value
 
 Your response should be BRIEF, about 2-3 sentences.
 
@@ -152,7 +152,7 @@ Besides the symbol, you cannot customize any of the screeners or graphics. Do no
         })
         return response.text || ''
     } catch (err) {
-        console.log("generateCaptionError",err)
+        console.log("generateCaptionError", err)
         return '' // Send tool use without caption.
     }
 }
@@ -183,14 +183,6 @@ async function submitUserMessage(content: string) {
             baseURL: toolBaseUrl,
             apiKey: apiKey
         });
-        console.log("data")
-        console.log("messages",[
-            ...aiState.get().messages.map((message: any) => ({
-                role: message.role,
-                content: message.content,
-                name: message.name
-            }))
-        ])
         const result = await streamUI({
             model: LlamaEdge(toolModelName),
             initial: <SpinnerMessage/>,
@@ -223,7 +215,7 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                     textStream = createStreamableValue('')
                     textNode = <BotMessage content={textStream.value}/>
                 }
-                try{
+                try {
                     JSON.parse(content)
                     if (done) {
                         textStream.done()
@@ -242,14 +234,13 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                         textStream.update(delta)
                     }
                     return textNode
-                }catch (e) {
+                } catch (e) {
                     const chatContent = await generateCaption(
                         "",
                         [],
                         '',
                         aiState
                     )
-                    console.log("chatContent",chatContent)
                     textStream.done()
                     aiState.done({
                         ...aiState.get(),
@@ -258,7 +249,7 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             {
                                 id: nanoid(),
                                 role: 'assistant',
-                                chatContent
+                                content: chatContent
                             }
                         ]
                     })
@@ -736,7 +727,7 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
             display: result.value
         }
     } catch (err: any) {
-        console.log("toolError",err)
+        console.log("toolError", err)
         return {
             id: nanoid(),
             display: (

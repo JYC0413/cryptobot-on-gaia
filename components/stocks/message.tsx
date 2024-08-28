@@ -95,7 +95,6 @@ export function BotCard({
     children: React.ReactNode
     showAvatar?: boolean
 }) {
-    console.log("children", children)
     return (
         <div className="group relative flex items-start md:-ml-12">
             <div
