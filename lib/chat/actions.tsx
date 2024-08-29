@@ -158,6 +158,75 @@ Besides the symbol, you cannot customize any of the screeners or graphics. Do no
     }
 }
 
+async function generateCaptionWithSearch(
+    aiState: MutableAIState
+): Promise<string> {
+
+    const LlamaEdge = createOpenAI({
+        baseURL: chatBaseUrl,
+        apiKey: apiKey
+    });
+
+    let queryData
+
+    try {
+        const searchSystemMessage ="Your task is to identify the most relevant search keyword or short phrase that you would use to find helpful information online to answer the user's question based on the previous conversation. Provide only the keyword or phrase, without any additional context or explanation."
+        const searchResponse = await generateText({
+            model: LlamaEdge(chatModelName),
+            messages: [
+                {
+                    role: 'system',
+                    content: searchSystemMessage
+                },
+                ...aiState.get().messages.map((message: any) => ({
+                    role: message.role,
+                    content: message.content,
+                    name: message.name
+                }))
+            ]
+        })
+        const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(searchResponse.text)}&format=json`);
+        queryData = await response.json();
+    } catch (err) {
+        console.log("search", err)
+        return '' // Send tool use without caption.
+    }
+
+    if(queryData){
+        aiState.update({
+            ...aiState.get(),
+            messages: [...aiState.get().messages,{
+                id: nanoid(),
+                role: 'assistant',
+                content:JSON.stringify(queryData)
+            }]
+        })
+    }
+
+    const withSearchSystemMessage = "As a cryptocurrency assistant, your primary focus is to provide accurate and insightful information related to cryptocurrency. However, you may also encounter questions that are not directly related to cryptocurrency. When such questions arise, use the information retrieved from the search queries to generate a clear and informative response. Ensure that your answers are relevant, comprehensive, and easy to understand, while still maintaining your role as a cryptocurrency expert."
+
+    try {
+        const response = await generateText({
+            model: LlamaEdge(chatModelName),
+            messages: [
+                {
+                    role: 'system',
+                    content: withSearchSystemMessage
+                },
+                ...aiState.get().messages.map((message: any) => ({
+                    role: message.role,
+                    content: message.content,
+                    name: message.name
+                }))
+            ]
+        })
+        return response.text || ''
+    } catch (err) {
+        console.log("generateCaptionWithSearchError", err)
+        return '' // Send tool use without caption.
+    }
+}
+
 async function submitUserMessage(content: string) {
     'use server'
 
@@ -236,12 +305,7 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                     }
                     return textNode
                 } catch (e) {
-                    const chatContent = await generateCaption(
-                        "",
-                        [],
-                        '',
-                        aiState
-                    )
+                    const chatContent = await generateCaptionWithSearch(aiState)
                     textStream.done()
                     aiState.done({
                         ...aiState.get(),
@@ -316,8 +380,6 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             aiState
                         )
 
-                        console.log("showCryptocurrencyChart",symbol)
-
                         return (
                             <BotCard>
                                 <CryptocurrencyChart symbol={symbol}/>
@@ -383,8 +445,6 @@ Assistant (you): { "tool_call": { "id": "pending", "type": "function", "function
                             'showCryptocurrencyComparisonChart',
                             aiState
                         )
-
-                        console.log("showCryptocurrencyComparisonChart",symbol)
 
                         return (
                             <BotCard>
