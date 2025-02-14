@@ -37,8 +37,8 @@ interface MutableAIState {
 const toolBaseUrl = process.env.LLAMAEDGE_TOOL_BASE_URL || "https://llama8b.gaia.domains/v1"
 const chatBaseUrl = process.env.LLAMAEDGE_CHAT_BASE_URL || "https://llama8b.gaia.domains/v1"
 const apiKey = process.env.LLAMAEDGE_API_KEY || "LLAMAEDGE"
-const toolModelName = process.env.LLAMAEDGE_TOOL_MODEL_NAME || "llama"
-const chatModelName = process.env.LLAMAEDGE_CHAT_MODEL_NAME || "llama"
+const toolModelName = process.env.LLAMAEDGE_TOOL_MODEL_NAME || "Meta-Llama-3.1-8B-Instruct-Q5_K_M"
+const chatModelName = process.env.LLAMAEDGE_CHAT_MODEL_NAME || "Meta-Llama-3.1-8B-Instruct-Q5_K_M"
 
 type ComparisonSymbolObject = {
     symbol: string;
