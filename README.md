@@ -50,7 +50,7 @@ StockBot is an AI-powered chatbot that leverages local LLMs, Vercel’s AI SDK, 
 ## Quickstart
 
 
-You will need an open-source LLMs to run the application. If you're not able to host a LLM, you can use public GaiaNet nodes, which is free right now.
+You will need an open-source LLMs to run the application. If you're not able to host a LLM, you can use public Gaia nodes, which is free right now.
 
 To get started locally, you can run the following:
 
